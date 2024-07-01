@@ -3,7 +3,7 @@
 
 //go:generate packer-sdc mapstructure-to-hcl2 -type Config
 
-package scaffolding
+package clone
 
 import (
 	"context"
@@ -16,7 +16,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/template/config"
 )
 
-const BuilderId = "scaffolding.builder"
+const BuilderId = "mvm-iso.builder"
 
 type Config struct {
 	common.PackerConfig `mapstructure:",squash"`
