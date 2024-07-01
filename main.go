@@ -7,8 +7,8 @@ import (
 	"github.com/martezr/packer-plugin-mvm/builder/mvm/clone"
 	"github.com/martezr/packer-plugin-mvm/builder/mvm/iso"
 
-	"github.com/hashicorp/packer-plugin-mvm/version"
 	"github.com/hashicorp/packer-plugin-sdk/plugin"
+	"github.com/martezr/packer-plugin-mvm/version"
 )
 
 func main() {
