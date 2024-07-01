@@ -1,4 +1,4 @@
-module github.com/hashicorp/packer-plugin-scaffolding
+module github.com/martezr/packer-plugin-mvm
 
 go 1.20
 
