@@ -1,7 +1,7 @@
 # Packer Plugin Morpheus MVM
 
 The `mvm` multi-component plugin can be used with HashiCorp [Packer](https://www.packer.io)
-to create custom images. For the full list of available features for this plugin see [docs](docs).
+to create custom images for the [MVM virtualization solution](https://docs.morpheusdata.com/en/latest/infrastructure/clusters/mvm.html) integrated with the Morpheus Platform. For the full list of available features for this plugin see [docs](docs).
 
 ## Installation
 
@@ -27,10 +27,9 @@ packer {
 }
 ```
 
-
 #### Manual installation
 
-You can find pre-built binary releases of the plugin [here](https://github.com/hashicorp/packer-plugin-oracle/releases).
+You can find pre-built binary releases of the plugin [here](https://github.com/martezr/packer-plugin-mvm/releases).
 Once you have downloaded the latest archive corresponding to your target OS,
 uncompress it to retrieve the plugin binary file corresponding to your platform.
 To install the plugin, please follow the Packer documentation on

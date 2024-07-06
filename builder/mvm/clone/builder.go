@@ -1,57 +1,50 @@
-// Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
-
-//go:generate packer-sdc mapstructure-to-hcl2 -type Config
-
 package clone
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/gomorpheus/morpheus-go-sdk"
 	"github.com/hashicorp/hcl/v2/hcldec"
-	"github.com/hashicorp/packer-plugin-sdk/common"
+	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/multistep/commonsteps"
 	"github.com/hashicorp/packer-plugin-sdk/packer"
-	"github.com/hashicorp/packer-plugin-sdk/template/config"
 )
 
-const BuilderId = "mvm-iso.builder"
-
-type Config struct {
-	common.PackerConfig `mapstructure:",squash"`
-	MockOption          string `mapstructure:"mock"`
-}
+const BuilderId = "mvm-clone.builder"
 
 type Builder struct {
-	config Config
-	runner multistep.Runner
+	moclient *morpheus.Client
+	config   Config
+	runner   multistep.Runner
 }
 
 func (b *Builder) ConfigSpec() hcldec.ObjectSpec { return b.config.FlatMapstructure().HCL2Spec() }
 
-func (b *Builder) Prepare(raws ...interface{}) (generatedVars []string, warnings []string, err error) {
-	err = config.Decode(&b.config, &config.DecodeOpts{
-		PluginType:  "packer.builder.scaffolding",
-		Interpolate: true,
-	}, raws...)
-	if err != nil {
-		return nil, nil, err
-	}
-	// Return the placeholder for the generated data that will become available to provisioners and post-processors.
-	// If the builder doesn't generate any data, just return an empty slice of string: []string{}
-	buildGeneratedData := []string{"GeneratedMockData"}
-	return buildGeneratedData, nil, nil
-}
-
 func (b *Builder) Run(ctx context.Context, ui packer.Ui, hook packer.Hook) (packer.Artifact, error) {
 	steps := []multistep.Step{}
 
+	client := morpheus.NewClient(b.config.Url)
+	client.SetUsernameAndPassword(b.config.Username, b.config.Password)
+	resp, err := client.Login()
+	if err != nil {
+		fmt.Println("LOGIN ERROR: ", err)
+	}
+	fmt.Println("LOGIN RESPONSE:", resp)
+
+	b.moclient = client
 	steps = append(steps,
-		&StepSayConfig{
-			MockConfig: b.config.MockOption,
+		&StepProvisionVM{builder: b},
+		&communicator.StepConnect{
+			Config:    &b.config.Comm,
+			Host:      communicator.CommHost(b.config.Comm.Host(), "server_ip"),
+			SSHConfig: b.config.Comm.SSHConfigFunc(),
 		},
-		new(commonsteps.StepProvision),
+		&commonsteps.StepProvision{},
+		&StepStopInstance{builder: b},
+		&StepConvertInstance{builder: b},
+		&StepRemoveInstance{builder: b},
 	)
 
 	// Setup the state bag and initial state for the steps

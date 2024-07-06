@@ -1,11 +1,4 @@
-<!--
-  Include a short overview about the plugin.
-
-  This document is a great location for creating a table of contents for each
-  of the components the plugin may provide. This document should load automatically
-  when navigating to the docs directory for a plugin.
-
--->
+This plugin allows Packer to communicate with the Morpheus platform. It is able to create custom images for MVM clusters. This plugin comes with builders designed to support building a custom image from an ISO file and an existing instance.
 
 ### Installation
 
@@ -14,9 +7,8 @@ To install this plugin, copy and paste this code into your Packer configuration,
 ```hcl
 packer {
   required_plugins {
-    name = {
-      # source represents the GitHub URI to the plugin repository without the `packer-plugin-` prefix.
-      source  = "github.com/organization/name"
+    mvm = {
+      source  = "github.com/martezr/mvm"
       version = ">=0.0.1"
     }
   }
@@ -26,17 +18,14 @@ packer {
 Alternatively, you can use `packer plugins install` to manage installation of this plugin.
 
 ```sh
-$ packer plugins install github.com/organization/plugin-name
+$ packer plugins install github.com/martezr/mvm
 ```
 
 ### Components
 
-The Scaffolding plugin is intended as a starting point for creating Packer plugins
-
 #### Builders
 
-- [builder](/packer/integrations/hashicorp/scaffolding/latest/components/builder/builder-name) - The scaffolding builder is used to create endless Packer
-  plugins using a consistent plugin structure.
+- [mvm-clone](/docs/builders/exoscale.md) - The `mvm-clone` builder is used to create Exoscale custom templates based on a Compute instance snapshot.
 
 #### Provisioners
 

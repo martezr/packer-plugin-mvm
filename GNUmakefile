@@ -1,4 +1,4 @@
-NAME=scaffolding
+NAME=mvm
 BINARY=packer-plugin-${NAME}
 
 COUNT?=1
@@ -13,7 +13,8 @@ build:
 
 dev:
 	go build -ldflags="-X '${PLUGIN_FQN}/version.VersionPrerelease=dev'" -o ${BINARY}
-	packer plugins install --path ${BINARY} "$(shell echo "${PLUGIN_FQN}" | sed 's/packer-plugin-//')"
+	chmod +x packer-plugin-mvm && cp packer-plugin-mvm ~/.packer.d/plugins
+	export PACKER_PLUGIN_PATH="~/.packer.d/plugins"
 
 test:
 	@go test -race -count $(COUNT) $(TEST) -timeout=3m
