@@ -1,7 +1,8 @@
-package clone
+package common
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -11,20 +12,22 @@ import (
 )
 
 // This is a definition of a builder step and should implement multistep.Step
-type StepRemoveInstance struct {
-	builder *Builder
-}
+type StepStopInstance struct{}
 
 // Run should execute the purpose of this step
-func (s *StepRemoveInstance) Run(_ context.Context, state multistep.StateBag) multistep.StepAction {
+func (s *StepStopInstance) Run(_ context.Context, state multistep.StateBag) multistep.StepAction {
 	var (
-		instance = state.Get("server").(*morpheus.Instance)
+		instance = state.Get("instance").(*morpheus.Instance)
 		ui       = state.Get("ui").(packersdk.Ui)
 	)
 
-	ui.Say("Removing compute instance")
+	ui.Say("Stopping instance")
+	c := state.Get("client").(*morpheus.Client)
 
-	data, err := s.builder.moclient.DeleteInstance(instance.ID, &morpheus.Request{})
+	data, err := c.Execute(&morpheus.Request{
+		Method: "PUT",
+		Path:   fmt.Sprintf("/api/instances/%d/stop", instance.ID),
+	})
 	if err != nil {
 		log.Println(err)
 	}
@@ -38,6 +41,6 @@ func (s *StepRemoveInstance) Run(_ context.Context, state multistep.StateBag) mu
 
 // Cleanup can be used to clean up any artifact created by the step.
 // A step's clean up always run at the end of a build, regardless of whether provisioning succeeds or fails.
-func (s *StepRemoveInstance) Cleanup(_ multistep.StateBag) {
+func (s *StepStopInstance) Cleanup(_ multistep.StateBag) {
 	// Nothing to clean
 }

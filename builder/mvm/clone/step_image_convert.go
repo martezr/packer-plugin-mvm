@@ -19,67 +19,71 @@ type StepConvertInstance struct {
 // Run should execute the purpose of this step
 func (s *StepConvertInstance) Run(_ context.Context, state multistep.StateBag) multistep.StepAction {
 	var (
-		instance = state.Get("server").(*morpheus.Instance)
+		instance = state.Get("instance").(*morpheus.Instance)
 		ui       = state.Get("ui").(packersdk.Ui)
 	)
 
-	ui.Say("Converting compute instance to image")
+	if s.builder.config.ConvertToTemplate {
 
-	//	clonePayload := make(map[string]interface{})
-	//	clonePayload["templateName"] = "demo123"
+		ui.Say("Converting compute instance to image")
 
-	data, err := s.builder.moclient.Execute(&morpheus.Request{
-		Method: "PUT",
-		//		Body:   clonePayload,
-		Path: fmt.Sprintf("/api/instances/%d/import-snapshot", instance.ID),
-	})
-	if err != nil {
-		log.Println(err)
-	}
+		//	clonePayload := make(map[string]interface{})
+		//	clonePayload["templateName"] = "demo123"
+		c := state.Get("client").(*morpheus.Client)
 
-	log.Println(data.Status)
-	time.Sleep(180 * time.Second)
+		data, err := c.Execute(&morpheus.Request{
+			Method: "PUT",
+			//		Body:   clonePayload,
+			Path: fmt.Sprintf("/api/instances/%d/import-snapshot", instance.ID),
+		})
+		if err != nil {
+			log.Println(err)
+		}
 
-	imageResponse, imageErr := s.builder.moclient.ListVirtualImages(&morpheus.Request{
-		QueryParams: map[string]string{
-			"name": "pack-%",
-		},
-	})
+		log.Println(data.Status)
+		time.Sleep(180 * time.Second)
 
-	if imageErr != nil {
-		log.Println(imageErr)
-	}
-	result := imageResponse.Result.(*morpheus.ListVirtualImagesResult)
-	firstRecord := (*result.VirtualImages)[0]
-	log.Println("IMAGE STATUS: ", firstRecord)
-	virtualImageId := firstRecord.ID
+		imageResponse, imageErr := c.ListVirtualImages(&morpheus.Request{
+			QueryParams: map[string]string{
+				"name": "pack-%",
+			},
+		})
 
-	// Status List: provisioning, pending, cancelled, removing
-	// Poll Virtual Images for Status
-	currentStatus := "Saving"
-	completedStatuses := []string{"Active"}
-	log.Println("Polling order status...")
+		if imageErr != nil {
+			log.Println(imageErr)
+		}
+		result := imageResponse.Result.(*morpheus.ListVirtualImagesResult)
+		firstRecord := (*result.VirtualImages)[0]
+		log.Println("IMAGE STATUS: ", firstRecord)
+		virtualImageId := firstRecord.ID
 
-	for !stringInSlice(completedStatuses, currentStatus) {
-		resp, err := s.builder.moclient.GetVirtualImage(virtualImageId, &morpheus.Request{})
+		// Status List: provisioning, pending, cancelled, removing
+		// Poll Virtual Images for Status
+		currentStatus := "Saving"
+		completedStatuses := []string{"Active"}
+		log.Println("Polling order status...")
+
+		for !stringInSlice(completedStatuses, currentStatus) {
+			resp, err := c.GetVirtualImage(virtualImageId, &morpheus.Request{})
+			if err != nil {
+				log.Println("API ERROR: ", err)
+			}
+			result := resp.Result.(*morpheus.GetVirtualImageResult)
+			currentStatus = result.VirtualImage.Status
+			log.Println("Current status:", currentStatus)
+			time.Sleep(30 * time.Second)
+		}
+
+		resp, err := c.UpdateVirtualImage(virtualImageId, &morpheus.Request{
+			Body: map[string]interface{}{
+				"name": s.builder.config.TemplateName,
+			},
+		})
 		if err != nil {
 			log.Println("API ERROR: ", err)
 		}
-		result := resp.Result.(*morpheus.GetVirtualImageResult)
-		currentStatus = result.VirtualImage.Status
-		log.Println("Current status:", currentStatus)
-		time.Sleep(30 * time.Second)
+		log.Println(resp.Status)
 	}
-
-	resp, err := s.builder.moclient.UpdateVirtualImage(virtualImageId, &morpheus.Request{
-		Body: map[string]interface{}{
-			"name": s.builder.config.TemplateName,
-		},
-	})
-	if err != nil {
-		log.Println("API ERROR: ", err)
-	}
-	log.Println(resp.Status)
 	// Determines that should continue to the next step
 	return multistep.ActionContinue
 }

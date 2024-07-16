@@ -17,14 +17,14 @@ type StepProvisionVM struct {
 	builder *Builder
 }
 
-type NetworkInterface struct {
+type PayloadNetworkInterface struct {
 	Network struct {
 		ID string `json:"id"`
 	} `json:"network"`
 	NetworkInterfaceTypeID int64 `json:"networkInterfaceTypeID"`
 }
 
-type StorageVolume struct {
+type PayloadStorageVolume struct {
 	ID          int64  `json:"id"`
 	RootVolume  bool   `json:"rootVolume"`
 	Name        string `json:"name"`
@@ -41,7 +41,8 @@ func (s *StepProvisionVM) Run(_ context.Context, state multistep.StateBag) multi
 	config := make(map[string]interface{})
 
 	// TODO: Update the instance to MVM
-	instanceTypeResponse, err := s.builder.moclient.FindInstanceTypeByName("ubuntu")
+	c := state.Get("client").(*morpheus.Client)
+	instanceTypeResponse, err := c.FindInstanceTypeByName("ubuntu")
 	if err != nil {
 		log.Printf("API FAILURE: %s - %s", instanceTypeResponse, err)
 	}
@@ -50,7 +51,7 @@ func (s *StepProvisionVM) Run(_ context.Context, state multistep.StateBag) multi
 	instanceType := instanceTypeResult.InstanceType
 
 	// Resource Pool
-	resourcePoolResp, err := s.builder.moclient.Execute(&morpheus.Request{
+	resourcePoolResp, err := c.Execute(&morpheus.Request{
 		Method:      "GET",
 		Path:        fmt.Sprintf("/api/options/zonePools?layoutId=%d", instanceType.InstanceTypeLayouts[0].ID),
 		QueryParams: map[string]string{},
@@ -63,7 +64,7 @@ func (s *StepProvisionVM) Run(_ context.Context, state multistep.StateBag) multi
 	json.Unmarshal(resourcePoolResp.Body, &itemResponsePayload)
 	var resourcePoolId int
 	for _, v := range itemResponsePayload.Data {
-		if v.ProviderType == "mvm" {
+		if v.ProviderType == "mvm" && v.Name == s.builder.config.ClusterName {
 			resourcePoolId = v.Id
 		}
 	}
@@ -77,7 +78,7 @@ func (s *StepProvisionVM) Run(_ context.Context, state multistep.StateBag) multi
 	//config["imageId"] = s.builder.config.VirtualImageID
 
 	// Skip Agent Install
-	config["noAgent"] = true
+	config["noAgent"] = s.builder.config.SkipAgentInstall
 
 	instancePayload := map[string]interface{}{
 		"name": s.builder.config.VirtualMachineName,
@@ -93,9 +94,6 @@ func (s *StepProvisionVM) Run(_ context.Context, state multistep.StateBag) multi
 		},
 		"layout": map[string]interface{}{
 			"id": 307,
-			//	"id":   instanceType.InstanceTypeLayouts[2].ID,
-			//	"code": instanceType.InstanceTypeLayouts[2].Code,
-			//	"name": instanceType.InstanceTypeLayouts[2].Name,
 		},
 	}
 
@@ -106,25 +104,29 @@ func (s *StepProvisionVM) Run(_ context.Context, state multistep.StateBag) multi
 	}
 
 	// Network Interfaces
-	var Nics []NetworkInterface
-	var NetworkDemo NetworkInterface
-	NetworkDemo.Network.ID = fmt.Sprintf("network-%d", s.builder.config.NetworkID)
-	// TODO: Expose Network Interface Type ID
-	NetworkDemo.NetworkInterfaceTypeID = 4
-	Nics = append(Nics, NetworkDemo)
+	var Nics []PayloadNetworkInterface
+
+	for _, nic := range s.builder.config.NetworkInterfaces {
+		var NetworkDemo PayloadNetworkInterface
+		NetworkDemo.NetworkInterfaceTypeID = nic.NetworkInterfaceTypeId
+		NetworkDemo.Network.ID = fmt.Sprintf("network-%d", nic.NetworkId)
+		Nics = append(Nics, NetworkDemo)
+	}
 	payload["networkInterfaces"] = Nics
 
-	// TODO: Expose storage volume
 	// Storage Volumes
-	var Volumes []StorageVolume
-	var StorageDemo StorageVolume
-	StorageDemo.ID = -1
-	StorageDemo.Name = "root"
-	StorageDemo.RootVolume = true
-	StorageDemo.Size = 20
-	StorageDemo.StorageType = 1
-	StorageDemo.DatastoreId = 10
-	Volumes = append(Volumes, StorageDemo)
+	var Volumes []PayloadStorageVolume
+
+	for _, sv := range s.builder.config.StorageVolumes {
+		var StorageDemo PayloadStorageVolume
+		StorageDemo.ID = -1
+		StorageDemo.Name = sv.Name
+		StorageDemo.RootVolume = sv.RootVolume
+		StorageDemo.Size = sv.Size
+		StorageDemo.StorageType = sv.StorageTypeID
+		StorageDemo.DatastoreId = sv.DatastoreID
+		Volumes = append(Volumes, StorageDemo)
+	}
 
 	payload["volumes"] = Volumes
 
@@ -132,11 +134,10 @@ func (s *StepProvisionVM) Run(_ context.Context, state multistep.StateBag) multi
 
 	// TODO: Remove additional logging
 	out, _ := json.Marshal(payload)
-	fmt.Println("JSON PAYLOAD")
-	ui.Say(fmt.Sprintf("JSON PAYLOAD %s", string(out)))
+	fmt.Println(out)
 
 	req := &morpheus.Request{Body: payload}
-	resp, err := s.builder.moclient.CreateInstance(req)
+	resp, err := c.CreateInstance(req)
 	if err != nil {
 		log.Printf("API FAILURE: %s - %s", resp, err)
 	}
@@ -144,10 +145,25 @@ func (s *StepProvisionVM) Run(_ context.Context, state multistep.StateBag) multi
 	result := resp.Result.(*morpheus.CreateInstanceResult)
 	instance := result.Instance
 
-	// TODO: Add polling logic for checking instance status
-	time.Sleep(300 * time.Second)
+	// Status List: provisioning, pending, cancelled, removing
+	// Poll Instance for Status
+	currentStatus := "provisioning"
+	completedStatuses := []string{"running", "failed", "warning", "denied", "cancelled", "suspended"}
+	ui.Sayf("Waiting for instance (%d) to to become ready", instance.ID)
 
-	respGet, err := s.builder.moclient.GetInstance(instance.ID, req)
+	for !stringInSlice(completedStatuses, currentStatus) {
+		resp, err := c.GetInstance(instance.ID, &morpheus.Request{})
+		if err != nil {
+			log.Println("API ERROR: ", err)
+		}
+		result := resp.Result.(*morpheus.GetInstanceResult)
+		currentStatus = result.Instance.Status
+		//ui.Sayf("Waiting for instance to provision - %s", currentStatus)
+		// sleep 30 seconds between polls
+		time.Sleep(30 * time.Second)
+	}
+
+	respGet, err := c.GetInstance(instance.ID, req)
 	if err != nil {
 		log.Printf("API FAILURE: %s - %s", resp, err)
 	}
@@ -155,9 +171,9 @@ func (s *StepProvisionVM) Run(_ context.Context, state multistep.StateBag) multi
 	resultGet := respGet.Result.(*morpheus.GetInstanceResult)
 	instanceGet := resultGet.Instance
 
-	state.Put("server", instanceGet)
-	state.Put("server_ip", instanceGet.ConnectionInfo[0].Ip)
-	state.Put("server_id", instance.ID)
+	state.Put("instance", instanceGet)
+	state.Put("instance_ip", instanceGet.ConnectionInfo[0].Ip)
+	state.Put("instance_id", instance.ID)
 
 	ui.Say(fmt.Sprintf("Instance IP Address %s", instanceGet.ConnectionInfo[0].Ip))
 
@@ -167,26 +183,7 @@ func (s *StepProvisionVM) Run(_ context.Context, state multistep.StateBag) multi
 
 // Cleanup can be used to clean up any artifact created by the step.
 // A step's clean up always run at the end of a build, regardless of whether provisioning succeeds or fails.
-func (s *StepProvisionVM) Cleanup(_ multistep.StateBag) {
-	// Nothing to clean
-	/*	ui := state.Get("ui").(packer.Ui)
-
-		if v, ok := state.GetOk("instance"); ok {
-			ui.Say("Cleanup: destroying compute instance")
-			respGet, err := s.builder.moclient.DeleteInstance(instance.ID, req)
-			if err != nil {
-				log.Printf("API FAILURE: %s - %s", resp, err)
-			}
-			log.Printf("API RESPONSE: %s", resp)
-			resultGet := respGet.Result.(*morpheus.GetInstanceResult)
-			instanceGet := resultGet.Instance
-
-			if err := s.builder.exo.DeleteInstance(ctx, s.builder.config.InstanceZone, instance); err != nil {
-				ui.Error(fmt.Sprintf("Unable to delete compute instance: %v", err))
-			}
-		}
-	*/
-}
+func (s *StepProvisionVM) Cleanup(_ multistep.StateBag) {}
 
 type ResourcePoolOptions struct {
 	Success bool `json:"success"`

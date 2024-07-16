@@ -2,60 +2,69 @@ package clone
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/gomorpheus/morpheus-go-sdk"
 	"github.com/hashicorp/hcl/v2/hcldec"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 	"github.com/hashicorp/packer-plugin-sdk/multistep/commonsteps"
 	"github.com/hashicorp/packer-plugin-sdk/packer"
+	"github.com/martezr/packer-plugin-mvm/builder/mvm/common"
 )
 
-const BuilderId = "mvm-clone.builder"
-
 type Builder struct {
-	moclient *morpheus.Client
-	config   Config
-	runner   multistep.Runner
+	config Config
+	runner multistep.Runner
 }
 
 func (b *Builder) ConfigSpec() hcldec.ObjectSpec { return b.config.FlatMapstructure().HCL2Spec() }
 
 func (b *Builder) Run(ctx context.Context, ui packer.Ui, hook packer.Hook) (packer.Artifact, error) {
+	// Setup the state bag and initial state for the steps
+	state := new(multistep.BasicStateBag)
+	state.Put("debug", b.config.PackerDebug)
+	state.Put("hook", hook)
+	state.Put("ui", ui)
+
 	steps := []multistep.Step{}
 
-	client := morpheus.NewClient(b.config.Url)
-	client.SetUsernameAndPassword(b.config.Username, b.config.Password)
-	resp, err := client.Login()
-	if err != nil {
-		fmt.Println("LOGIN ERROR: ", err)
-	}
-	fmt.Println("LOGIN RESPONSE:", resp)
-
-	b.moclient = client
 	steps = append(steps,
+		&common.StepConnect{
+			Config: &b.config.ConnectConfiguration,
+		},
 		&StepProvisionVM{builder: b},
 		&communicator.StepConnect{
 			Config:    &b.config.Comm,
-			Host:      communicator.CommHost(b.config.Comm.Host(), "server_ip"),
+			Host:      communicator.CommHost(b.config.Comm.Host(), "instance_ip"),
 			SSHConfig: b.config.Comm.SSHConfigFunc(),
 		},
-		&commonsteps.StepProvision{},
-		&StepStopInstance{builder: b},
-		&StepConvertInstance{builder: b},
-		&StepRemoveInstance{builder: b},
 	)
 
-	// Setup the state bag and initial state for the steps
-	state := new(multistep.BasicStateBag)
-	state.Put("hook", hook)
-	state.Put("ui", ui)
+	if b.config.Comm.Type != "none" {
+		steps = append(steps,
+			&communicator.StepConnect{
+				Config:    &b.config.Comm,
+				Host:      communicator.CommHost(b.config.Comm.Host(), "instance_ip"),
+				SSHConfig: b.config.Comm.SSHConfigFunc(),
+			},
+			&commonsteps.StepProvision{},
+		)
+	} else {
+		steps = append(steps,
+			&commonsteps.StepProvision{},
+		)
+	}
+
+	steps = append(steps,
+		&common.StepStopInstance{},
+		&StepConvertInstance{builder: b},
+		//&common.StepRemoveInstance{},
+	)
 
 	// Set the value of the generated data that will become available to provisioners.
 	// To share the data with post-processors, use the StateData in the artifact.
 	state.Put("generated_data", map[string]interface{}{
 		"GeneratedMockData": "mock-build-data",
+		//	"InstanceId":        state.Get("instance_id"),
 	})
 
 	// Run!
@@ -67,10 +76,13 @@ func (b *Builder) Run(ctx context.Context, ui packer.Ui, hook packer.Hook) (pack
 		return nil, err.(error)
 	}
 
-	artifact := &Artifact{
+	artifact := &common.Artifact{
 		// Add the builder generated data to the artifact StateData so that post-processors
 		// can access them.
-		StateData: map[string]interface{}{"generated_data": state.Get("generated_data")},
+		//InstanceId: state.Get("instance_id").(int64),
+		StateData: map[string]interface{}{
+			"generated_data": state.Get("generated_data"),
+		},
 	}
 	return artifact, nil
 }

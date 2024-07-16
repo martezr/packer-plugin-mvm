@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/martezr/packer-plugin-mvm/provisioner/morpheus"
+
 	"github.com/martezr/packer-plugin-mvm/builder/mvm/clone"
 	"github.com/martezr/packer-plugin-mvm/builder/mvm/iso"
 
@@ -15,6 +17,7 @@ func main() {
 	pps := plugin.NewSet()
 	pps.RegisterBuilder("iso", new(iso.Builder))
 	pps.RegisterBuilder("clone", new(clone.Builder))
+	pps.RegisterProvisioner("morpheus", new(morpheus.Provisioner))
 
 	pps.SetVersion(version.PluginVersion)
 	err := pps.Run()

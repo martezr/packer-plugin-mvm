@@ -1,7 +1,11 @@
-package clone
+package common
+
+const BuilderId = "morpheus.mvm"
 
 // packersdk.Artifact implementation
 type Artifact struct {
+	Name       string
+	InstanceId int64
 	// StateData should store data such as GeneratedData
 	// to be shared with post-processors
 	StateData map[string]interface{}
