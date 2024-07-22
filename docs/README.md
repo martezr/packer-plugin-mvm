@@ -25,20 +25,8 @@ $ packer plugins install github.com/martezr/mvm
 
 #### Builders
 
-- [mvm-clone](/docs/builders/exoscale.md) - The `mvm-clone` builder is used to create Exoscale custom templates based on a Compute instance snapshot.
+- [mvm-clone](/docs/builders/mvm-clone.md) - The `mvm-clone` builder is used to create MVM custom templates based on an existing MVM virtual machine.
 
 #### Provisioners
 
-- [provisioner](/packer/integrations/hashicorp/scaffolding/latest/components/provisioner/provisioner-name) - The scaffolding provisioner is used to provisioner
-  Packer builds.
-
-#### Post-processors
-
-- [post-processor](/packer/integrations/hashicorp/scaffolding/latest/components/post-processor/postprocessor-name) - The scaffolding post-processor is used to
-  export scaffolding builds.
-
-#### Data Sources
-
-- [data source](/packer/integrations/hashicorp/scaffolding/latest/components/datasource/datasource-name) - The scaffolding data source is used to
-  export scaffolding data.
-
+- [mvm-morpheus](/docs/provisioners/mvm-morpheus.md) - The `mvm-morpheus` provisioner that utilizes the Morpheus automation (tasks and workflows) to configure the virtual machine.

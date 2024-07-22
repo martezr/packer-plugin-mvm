@@ -1,4 +1,4 @@
-package clone
+package iso
 
 import (
 	"context"
@@ -42,7 +42,7 @@ func (s *StepProvisionVM) Run(_ context.Context, state multistep.StateBag) multi
 
 	// TODO: Update the instance to MVM
 	c := state.Get("client").(*morpheus.Client)
-	instanceTypeResponse, err := c.FindInstanceTypeByName("ubuntu")
+	instanceTypeResponse, err := c.FindInstanceTypeByName("mvm")
 	if err != nil {
 		log.Printf("API FAILURE: %s - %s", instanceTypeResponse, err)
 	}
@@ -72,10 +72,10 @@ func (s *StepProvisionVM) Run(_ context.Context, state multistep.StateBag) multi
 	config["resourcePoolId"] = resourcePoolId
 	config["poolProviderType"] = "mvm"
 	// Create User
-	config["createUser"] = true
+	//config["createUser"] = true
 
 	// Image ID
-	//config["imageId"] = s.builder.config.VirtualImageID
+	config["imageId"] = s.builder.config.VirtualImageID
 
 	// Skip Agent Install
 	config["noAgent"] = s.builder.config.SkipAgentInstall
@@ -93,7 +93,7 @@ func (s *StepProvisionVM) Run(_ context.Context, state multistep.StateBag) multi
 			"id": s.builder.config.ServicePlanID,
 		},
 		"layout": map[string]interface{}{
-			"id": 307,
+			"id": instanceType.InstanceTypeLayouts[0].ID,
 		},
 	}
 
@@ -172,11 +172,13 @@ func (s *StepProvisionVM) Run(_ context.Context, state multistep.StateBag) multi
 	instanceGet := resultGet.Instance
 
 	state.Put("instance", instanceGet)
-	state.Put("instance_ip", instanceGet.ConnectionInfo[0].Ip)
 	state.Put("instance_id", instance.ID)
 
-	ui.Say(fmt.Sprintf("Instance IP Address %s", instanceGet.ConnectionInfo[0].Ip))
-
+	if instance.Status == "failed" {
+		ui.Error("Instance provisioning failed")
+		return multistep.ActionHalt
+	}
+	//ui.Say(fmt.Sprintf("Instance IP Address %s", instanceGet.ConnectionInfo[0].Ip))
 	// Determines that should continue to the next step
 	return multistep.ActionContinue
 }

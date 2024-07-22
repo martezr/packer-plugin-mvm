@@ -1,6 +1,3 @@
-// Copyright (c) HashiCorp, Inc.
-// SPDX-License-Identifier: MPL-2.0
-
 package morpheus
 
 import (
@@ -18,7 +15,7 @@ import (
 //go:embed test-fixtures/template.pkr.hcl
 var testProvisionerHCL2Basic string
 
-// Run with: PACKER_ACC=1 go test -count 1 -v ./provisioner/scaffolding/provisioner_acc_test.go  -timeout=120m
+// Run with: PACKER_ACC=1 go test -count 1 -v ./provisioner/morpheus/provisioner_acc_test.go  -timeout=120m
 func TestAccScaffoldingProvisioner(t *testing.T) {
 	testCase := &acctest.PluginTestCase{
 		Name: "scaffolding_provisioner_basic_test",

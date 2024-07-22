@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/martezr/packer-plugin-mvm/provisioner/morpheus"
-
 	"github.com/martezr/packer-plugin-mvm/builder/mvm/clone"
 	"github.com/martezr/packer-plugin-mvm/builder/mvm/iso"
+	"github.com/martezr/packer-plugin-mvm/provisioner/morpheus"
 
 	"github.com/hashicorp/packer-plugin-sdk/plugin"
 	"github.com/martezr/packer-plugin-mvm/version"

@@ -23,17 +23,19 @@ type Config struct {
 	Password    string `mapstructure:"password"`
 	AccessToken string `mapstructure:"access_token"`
 
-	// The Password to run with bolt. Only used for WinRM
+	// The ID of the automation task to execute
 	TaskID int `mapstructure:"task_id"`
 
-	// The ID of the workflow to execute against the instance
-	WorkflowID int `mapstructure:"workflow_id"`
-
-	WorkflowPhase string `mapstructure:"workflow_id"`
-
+	// The parameters to pass to the automation task
 	TaskParams map[interface{}]interface{} `mapstructure:"task_parameters"`
 
-	// Workflow parameters
+	// The ID of the automation workflow to execute
+	WorkflowID int `mapstructure:"workflow_id"`
+
+	// The phase of the provisioning workflow to execute
+	WorkflowPhase string `mapstructure:"workflow_phase"`
+
+	// The parameters to pass to the automation workflow
 	WorkflowParams map[interface{}]interface{} `mapstructure:"workflow_parameters"`
 }
 
@@ -61,12 +63,12 @@ func (p *Provisioner) Prepare(raws ...interface{}) error {
 }
 
 func (p *Provisioner) Provision(_ context.Context, ui packer.Ui, _ packer.Communicator, generatedData map[string]interface{}) error {
-	ui.Say("Provisioning with Morpheus...")
+	ui.Say("Provisioning with Morpheus provisioner...")
 	client := morpheus.NewClient(p.config.Url)
 	if p.config.AccessToken != "" {
-		client.SetUsernameAndPassword(p.config.Username, p.config.Password)
-	} else {
 		client.SetAccessToken(p.config.AccessToken, "", 86400, "write")
+	} else {
+		client.SetUsernameAndPassword(p.config.Username, p.config.Password)
 	}
 	resp, err := client.Login()
 	if err != nil {
@@ -74,41 +76,77 @@ func (p *Provisioner) Provision(_ context.Context, ui packer.Ui, _ packer.Commun
 	}
 	fmt.Println("LOGIN RESPONSE:", resp)
 	instanceId := generatedData["ID"].(int64)
+	var jobExecutionId int
 
-	ui.Sayf("Executing Morpheus: running task %d on instance %d", p.config.TaskID, instanceId)
-	payloadConfig := make(map[string]interface{})
-	jobPayload := make(map[string]interface{})
-	jobPayload["name"] = fmt.Sprintf("Packer Provisioner Execution - %d", instanceId)
-	jobPayload["targetType"] = "instance"
-	jobPayload["instances"] = []int64{instanceId}
-	payloadConfig["job"] = jobPayload
+	// Execute automation task
+	if p.config.TaskID != 0 {
+		ui.Sayf("Executing Morpheus: running task %d on instance %d", p.config.TaskID, instanceId)
+		payloadConfig := make(map[string]interface{})
+		jobPayload := make(map[string]interface{})
+		jobPayload["name"] = fmt.Sprintf("Packer Provisioner Execution - %d", instanceId)
+		jobPayload["targetType"] = "instance"
+		jobPayload["instances"] = []int64{instanceId}
+		payloadConfig["job"] = jobPayload
 
-	resp, err = client.Execute(&morpheus.Request{
-		Method: "POST",
-		Body:   payloadConfig,
-		Path:   fmt.Sprintf("/api/tasks/%d/execute", p.config.TaskID),
-		Result: &TaskExecutionResult{},
-	})
+		resp, err = client.Execute(&morpheus.Request{
+			Method: "POST",
+			Body:   payloadConfig,
+			Path:   fmt.Sprintf("/api/tasks/%d/execute", p.config.TaskID),
+			Result: &TaskExecutionResult{},
+		})
 
-	if err != nil {
-		if resp != nil && resp.StatusCode == 404 {
-			log.Printf("API 404: %s - %v", resp, err)
-			return nil
-		} else {
-			log.Printf("API FAILURE: %s - %v", resp, err)
+		if err != nil {
+			if resp != nil && resp.StatusCode == 404 {
+				log.Printf("API 404: %s - %v", resp, err)
+				return nil
+			} else {
+				log.Printf("API FAILURE: %s - %v", resp, err)
+			}
 		}
-	}
-	log.Printf("API RESPONSE: %s", resp)
+		log.Printf("API RESPONSE: %s", resp)
 
-	// store resource data
-	output := resp.Result.(*TaskExecutionResult)
-	log.Println(output.Job.ID)
+		// store resource data
+		output := resp.Result.(*TaskExecutionResult)
+		jobExecutionId = output.JobExecution.ID
+	}
+
+	// Execute automation workflow
+	if p.config.WorkflowID != 0 {
+		ui.Sayf("Executing Morpheus: running workflow %d on instance %d", p.config.WorkflowID, instanceId)
+		payloadConfig := make(map[string]interface{})
+		jobPayload := make(map[string]interface{})
+		jobPayload["name"] = fmt.Sprintf("Packer Provisioner Execution - %d", instanceId)
+		jobPayload["targetType"] = "instance"
+		jobPayload["instances"] = []int64{instanceId}
+		payloadConfig["job"] = jobPayload
+
+		resp, err = client.Execute(&morpheus.Request{
+			Method: "POST",
+			Body:   payloadConfig,
+			Path:   fmt.Sprintf("/api/task-sets/%d/execute", p.config.TaskID),
+			Result: &TaskExecutionResult{},
+		})
+
+		if err != nil {
+			if resp != nil && resp.StatusCode == 404 {
+				log.Printf("API 404: %s - %v", resp, err)
+				return nil
+			} else {
+				log.Printf("API FAILURE: %s - %v", resp, err)
+			}
+		}
+		log.Printf("API RESPONSE: %s", resp)
+
+		// store resource data
+		output := resp.Result.(*TaskExecutionResult)
+		jobExecutionId = output.JobExecution.ID
+	}
 
 	// Fetch Execution Response
 	//
 	resp, err = client.Execute(&morpheus.Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/job-executions/%d", output.JobExecution.ID),
+		Path:   fmt.Sprintf("/api/job-executions/%d", jobExecutionId),
 		Result: &JobExecutionResult{},
 	})
 
@@ -134,7 +172,7 @@ func (p *Provisioner) Provision(_ context.Context, ui packer.Ui, _ packer.Commun
 	for !stringInSlice(completedStatuses, currentStatus) {
 		resp, err = client.Execute(&morpheus.Request{
 			Method: "GET",
-			Path:   fmt.Sprintf("/api/job-executions/%d", output.JobExecution.ID),
+			Path:   fmt.Sprintf("/api/job-executions/%d", jobExecutionId),
 			Result: &JobExecutionResult{},
 		})
 
@@ -155,9 +193,10 @@ func (p *Provisioner) Provision(_ context.Context, ui packer.Ui, _ packer.Commun
 		time.Sleep(30 * time.Second)
 	}
 
+	// Fetch final payload data
 	resp, err = client.Execute(&morpheus.Request{
 		Method: "GET",
-		Path:   fmt.Sprintf("/api/job-executions/%d", output.JobExecution.ID),
+		Path:   fmt.Sprintf("/api/job-executions/%d", jobExecutionId),
 		Result: &JobExecutionResult{},
 	})
 
@@ -171,7 +210,6 @@ func (p *Provisioner) Provision(_ context.Context, ui packer.Ui, _ packer.Commun
 	}
 	log.Printf("API RESPONSE: %s", resp)
 
-	// store resource data
 	executionOutput = resp.Result.(*JobExecutionResult)
 	ui.Message(executionOutput.JobExecution.Process.Events[0].Output)
 	return nil

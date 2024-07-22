@@ -14,10 +14,10 @@ type FlatConfig struct {
 	Username       *string                     `mapstructure:"username" cty:"username" hcl:"username"`
 	Password       *string                     `mapstructure:"password" cty:"password" hcl:"password"`
 	AccessToken    *string                     `mapstructure:"access_token" cty:"access_token" hcl:"access_token"`
-	InstanceId     *int                        `mapstructure:"instance_id" cty:"instance_id" hcl:"instance_id"`
 	TaskID         *int                        `mapstructure:"task_id" cty:"task_id" hcl:"task_id"`
-	WorkflowID     *int                        `mapstructure:"workflow_id" cty:"workflow_id" hcl:"workflow_id"`
 	TaskParams     map[interface{}]interface{} `mapstructure:"task_parameters" cty:"task_parameters" hcl:"task_parameters"`
+	WorkflowID     *int                        `mapstructure:"workflow_id" cty:"workflow_id" hcl:"workflow_id"`
+	WorkflowPhase  *string                     `mapstructure:"workflow_phase" cty:"workflow_phase" hcl:"workflow_phase"`
 	WorkflowParams map[interface{}]interface{} `mapstructure:"workflow_parameters" cty:"workflow_parameters" hcl:"workflow_parameters"`
 }
 
@@ -37,10 +37,10 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"username":            &hcldec.AttrSpec{Name: "username", Type: cty.String, Required: false},
 		"password":            &hcldec.AttrSpec{Name: "password", Type: cty.String, Required: false},
 		"access_token":        &hcldec.AttrSpec{Name: "access_token", Type: cty.String, Required: false},
-		"instance_id":         &hcldec.AttrSpec{Name: "instance_id", Type: cty.Number, Required: false},
 		"task_id":             &hcldec.AttrSpec{Name: "task_id", Type: cty.Number, Required: false},
-		"workflow_id":         &hcldec.AttrSpec{Name: "workflow_id", Type: cty.Number, Required: false},
 		"task_parameters":     &hcldec.AttrSpec{Name: "task_parameters", Type: cty.Map(cty.String), Required: false},
+		"workflow_id":         &hcldec.AttrSpec{Name: "workflow_id", Type: cty.Number, Required: false},
+		"workflow_phase":      &hcldec.AttrSpec{Name: "workflow_phase", Type: cty.String, Required: false},
 		"workflow_parameters": &hcldec.AttrSpec{Name: "workflow_parameters", Type: cty.Map(cty.String), Required: false},
 	}
 	return s

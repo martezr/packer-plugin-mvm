@@ -1,7 +1,7 @@
 //go:generate packer-sdc struct-markdown
 //go:generate packer-sdc mapstructure-to-hcl2 -type Config,NetworkInterface,StorageVolume
 
-package clone
+package iso
 
 import (
 	packerCommon "github.com/hashicorp/packer-plugin-sdk/common"

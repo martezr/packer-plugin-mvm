@@ -18,8 +18,8 @@ source "mvm-clone" "demo" {
   username = var.morpheus_username
   password = var.morpheus_password
   cluster_name = "mvmcluster02"
-  convert_to_template = false
-  skip_agent_install = false
+  convert_to_template = true
+  skip_agent_install = true
   vm_name = "pack-${local.timestamp}"
   template_name = "packertest"
   virtual_image_id = 439

@@ -1,4 +1,4 @@
-Type: `scaffolding`
+Type: `mvm-morpheus`
 
 <!--
   Include a short description about the provisioner. This is a good place
@@ -36,18 +36,21 @@ The scaffolding provisioner is used to provisioner Packer builds.
 
 
 ```hcl
- source "null" "example" {
-   communicator = "none"
- }
+source "null" "basic-example" {
+  communicator = "none"
+}
 
- build {
-   source "null.example" {
-     name = "jay"
-   }
+build {
+  sources = [
+    "source.null.basic-example"
+  ]
 
-   provisioner "scaffolding" {
-     mock = "mocking ${source.name}"
-   }
- }
+  provisioner "mvm-morpheus" {
+    url      = "https://morpheus.test.local"
+    username = "admin"
+    password = "Password123"
+    task_id  = 2
+  }
+}
 ```
 

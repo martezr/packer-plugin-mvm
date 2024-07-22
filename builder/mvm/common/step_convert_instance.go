@@ -1,4 +1,4 @@
-package clone
+package common
 
 import (
 	"context"
@@ -13,7 +13,9 @@ import (
 
 // This is a definition of a builder step and should implement multistep.Step
 type StepConvertInstance struct {
-	builder *Builder
+	ConvertToTemplate bool
+	InstanceName      string
+	TemplateName      string
 }
 
 // Run should execute the purpose of this step
@@ -23,9 +25,9 @@ func (s *StepConvertInstance) Run(_ context.Context, state multistep.StateBag) m
 		ui       = state.Get("ui").(packersdk.Ui)
 	)
 
-	if s.builder.config.ConvertToTemplate {
+	if s.ConvertToTemplate {
 
-		ui.Say("Converting compute instance to image")
+		ui.Say("Converting instance to image")
 
 		//	clonePayload := make(map[string]interface{})
 		//	clonePayload["templateName"] = "demo123"
@@ -40,12 +42,13 @@ func (s *StepConvertInstance) Run(_ context.Context, state multistep.StateBag) m
 			log.Println(err)
 		}
 
-		log.Println(data.Status)
+		log.Println(data.JsonData)
 		time.Sleep(180 * time.Second)
 
+		log.Printf("Image Name: %s", s.InstanceName+"-%")
 		imageResponse, imageErr := c.ListVirtualImages(&morpheus.Request{
 			QueryParams: map[string]string{
-				"name": "pack-%",
+				"name": s.InstanceName + "-%",
 			},
 		})
 
@@ -76,7 +79,7 @@ func (s *StepConvertInstance) Run(_ context.Context, state multistep.StateBag) m
 
 		resp, err := c.UpdateVirtualImage(virtualImageId, &morpheus.Request{
 			Body: map[string]interface{}{
-				"name": s.builder.config.TemplateName,
+				"name": s.TemplateName,
 			},
 		})
 		if err != nil {
