@@ -29,6 +29,7 @@ func (s *StepRemoveInstance) Run(_ context.Context, state multistep.StateBag) mu
 	}
 
 	log.Println(data.Status)
+	// TODO: Add polling support to check instance state
 	time.Sleep(30 * time.Second)
 
 	// Determines that should continue to the next step

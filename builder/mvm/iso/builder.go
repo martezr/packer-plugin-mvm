@@ -1,5 +1,3 @@
-//go:generate packer-sdc mapstructure-to-hcl2 -type Config
-
 package iso
 
 import (
@@ -22,6 +20,10 @@ type Builder struct {
 
 func (b *Builder) ConfigSpec() hcldec.ObjectSpec { return b.config.FlatMapstructure().HCL2Spec() }
 
+func (b *Builder) Prepare(raws ...interface{}) ([]string, []string, error) {
+	return b.config.Prepare(raws...)
+}
+
 func (b *Builder) Run(ctx context.Context, ui packer.Ui, hook packer.Hook) (packer.Artifact, error) {
 	// Setup the state bag and initial state for the steps
 	state := new(multistep.BasicStateBag)
@@ -31,12 +33,47 @@ func (b *Builder) Run(ctx context.Context, ui packer.Ui, hook packer.Hook) (pack
 
 	steps := []multistep.Step{}
 
+	// Set the address for the HTTP server based on the configuration
+	// provided by the user.
+	if addrs := b.config.HTTPConfig.HTTPAddress; addrs != "" && addrs != DefaultHttpBindAddress {
+		// Validate and use the specified HTTPAddress.
+		err := ValidateHTTPAddress(addrs)
+		if err != nil {
+			ui.Errorf("error validating IP address for HTTP server: %s", err)
+			return nil, err
+		}
+		state.Put("http_bind_address", addrs)
+	} else if intf := b.config.HTTPConfig.HTTPInterface; intf != "" {
+		// Use the specified HTTPInterface.
+		state.Put("http_interface", intf)
+	}
+
+	/*else {
+		// Use IP discovery if neither HTTPAddress nor HTTPInterface
+		// is specified.
+		steps = append(steps, &StepHTTPIPDiscover{
+			HTTPIP:  b.config.BootConfig.HTTPIP,
+			Network: ipnet,
+		})
+	}*/
+
 	steps = append(steps,
 		&common.StepConnect{
 			Config: &b.config.ConnectConfiguration,
 		},
 		&StepProvisionVM{builder: b},
-		&StepSendKeys{},
+		&StepGenerateHTTPTemplates{
+			TemplateDirectory: b.config.HTTPTemplateDirectory,
+			HTTPDirectory:     b.config.HTTPDir,
+			Ctx:               b.config.Ctx,
+		},
+		commonsteps.HTTPServerFromHTTPConfig(&b.config.HTTPConfig),
+		&StepTypeBootCommand{
+			Config: &b.config.BootConfig,
+			Ctx:    b.config.Ctx,
+			VMName: b.config.VirtualMachineName,
+		},
+		&common.StepWaitForIp{},
 	)
 
 	if b.config.Comm.Type != "none" {
@@ -53,17 +90,16 @@ func (b *Builder) Run(ctx context.Context, ui packer.Ui, hook packer.Hook) (pack
 			&commonsteps.StepProvision{},
 		)
 	}
-	/*
-		steps = append(steps,
-			&common.StepStopInstance{},
-			&common.StepConvertInstance{
-				ConvertToTemplate: b.config.ConvertToTemplate,
-				InstanceName:      b.config.VirtualMachineName,
-				TemplateName:      b.config.TemplateName,
-			},
-			&common.StepRemoveInstance{},
-		)
-	*/
+
+	steps = append(steps,
+		&common.StepStopInstance{},
+		//&common.StepConvertInstance{
+		//	ConvertToTemplate: b.config.ConvertToTemplate,
+		//	InstanceName:      b.config.VirtualMachineName,
+		//	TemplateName:      b.config.TemplateName,
+		//},
+		//&common.StepRemoveInstance{},
+	)
 
 	// Set the value of the generated data that will become available to provisioners.
 	// To share the data with post-processors, use the StateData in the artifact.

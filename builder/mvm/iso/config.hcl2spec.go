@@ -18,6 +18,16 @@ type FlatConfig struct {
 	PackerOnError             *string                `mapstructure:"packer_on_error" cty:"packer_on_error" hcl:"packer_on_error"`
 	PackerUserVars            map[string]string      `mapstructure:"packer_user_variables" cty:"packer_user_variables" hcl:"packer_user_variables"`
 	PackerSensitiveVars       []string               `mapstructure:"packer_sensitive_variables" cty:"packer_sensitive_variables" hcl:"packer_sensitive_variables"`
+	HTTPDir                   *string                `mapstructure:"http_directory" cty:"http_directory" hcl:"http_directory"`
+	HTTPContent               map[string]string      `mapstructure:"http_content" cty:"http_content" hcl:"http_content"`
+	HTTPPortMin               *int                   `mapstructure:"http_port_min" cty:"http_port_min" hcl:"http_port_min"`
+	HTTPPortMax               *int                   `mapstructure:"http_port_max" cty:"http_port_max" hcl:"http_port_max"`
+	HTTPAddress               *string                `mapstructure:"http_bind_address" cty:"http_bind_address" hcl:"http_bind_address"`
+	HTTPInterface             *string                `mapstructure:"http_interface" undocumented:"true" cty:"http_interface" hcl:"http_interface"`
+	BootGroupInterval         *string                `mapstructure:"boot_keygroup_interval" cty:"boot_keygroup_interval" hcl:"boot_keygroup_interval"`
+	BootWait                  *string                `mapstructure:"boot_wait" cty:"boot_wait" hcl:"boot_wait"`
+	BootCommand               []string               `mapstructure:"boot_command" cty:"boot_command" hcl:"boot_command"`
+	HTTPIP                    *string                `mapstructure:"http_ip" cty:"http_ip" hcl:"http_ip"`
 	Type                      *string                `mapstructure:"communicator" cty:"communicator" hcl:"communicator"`
 	PauseBeforeConnect        *string                `mapstructure:"pause_before_connecting" cty:"pause_before_connecting" hcl:"pause_before_connecting"`
 	SSHHost                   *string                `mapstructure:"ssh_host" cty:"ssh_host" hcl:"ssh_host"`
@@ -71,6 +81,7 @@ type FlatConfig struct {
 	Username                  *string                `mapstructure:"username" cty:"username" hcl:"username"`
 	Password                  *string                `mapstructure:"password" cty:"password" hcl:"password"`
 	AccessToken               *string                `mapstructure:"access_token" cty:"access_token" hcl:"access_token"`
+	HTTPTemplateDirectory     *string                `mapstructure:"http_template_directory" cty:"http_template_directory" hcl:"http_template_directory"`
 	ConvertToTemplate         *bool                  `mapstructure:"convert_to_template" cty:"convert_to_template" hcl:"convert_to_template"`
 	SkipAgentInstall          *bool                  `mapstructure:"skip_agent_install" cty:"skip_agent_install" hcl:"skip_agent_install"`
 	ClusterName               *string                `mapstructure:"cluster_name" cty:"cluster_name" hcl:"cluster_name"`
@@ -104,6 +115,16 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"packer_on_error":              &hcldec.AttrSpec{Name: "packer_on_error", Type: cty.String, Required: false},
 		"packer_user_variables":        &hcldec.AttrSpec{Name: "packer_user_variables", Type: cty.Map(cty.String), Required: false},
 		"packer_sensitive_variables":   &hcldec.AttrSpec{Name: "packer_sensitive_variables", Type: cty.List(cty.String), Required: false},
+		"http_directory":               &hcldec.AttrSpec{Name: "http_directory", Type: cty.String, Required: false},
+		"http_content":                 &hcldec.AttrSpec{Name: "http_content", Type: cty.Map(cty.String), Required: false},
+		"http_port_min":                &hcldec.AttrSpec{Name: "http_port_min", Type: cty.Number, Required: false},
+		"http_port_max":                &hcldec.AttrSpec{Name: "http_port_max", Type: cty.Number, Required: false},
+		"http_bind_address":            &hcldec.AttrSpec{Name: "http_bind_address", Type: cty.String, Required: false},
+		"http_interface":               &hcldec.AttrSpec{Name: "http_interface", Type: cty.String, Required: false},
+		"boot_keygroup_interval":       &hcldec.AttrSpec{Name: "boot_keygroup_interval", Type: cty.String, Required: false},
+		"boot_wait":                    &hcldec.AttrSpec{Name: "boot_wait", Type: cty.String, Required: false},
+		"boot_command":                 &hcldec.AttrSpec{Name: "boot_command", Type: cty.List(cty.String), Required: false},
+		"http_ip":                      &hcldec.AttrSpec{Name: "http_ip", Type: cty.String, Required: false},
 		"communicator":                 &hcldec.AttrSpec{Name: "communicator", Type: cty.String, Required: false},
 		"pause_before_connecting":      &hcldec.AttrSpec{Name: "pause_before_connecting", Type: cty.String, Required: false},
 		"ssh_host":                     &hcldec.AttrSpec{Name: "ssh_host", Type: cty.String, Required: false},
@@ -157,6 +178,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"username":                     &hcldec.AttrSpec{Name: "username", Type: cty.String, Required: false},
 		"password":                     &hcldec.AttrSpec{Name: "password", Type: cty.String, Required: false},
 		"access_token":                 &hcldec.AttrSpec{Name: "access_token", Type: cty.String, Required: false},
+		"http_template_directory":      &hcldec.AttrSpec{Name: "http_template_directory", Type: cty.String, Required: false},
 		"convert_to_template":          &hcldec.AttrSpec{Name: "convert_to_template", Type: cty.Bool, Required: false},
 		"skip_agent_install":           &hcldec.AttrSpec{Name: "skip_agent_install", Type: cty.Bool, Required: false},
 		"cluster_name":                 &hcldec.AttrSpec{Name: "cluster_name", Type: cty.String, Required: false},
@@ -204,7 +226,7 @@ type FlatStorageVolume struct {
 	RootVolume    *bool   `mapstructure:"root_volume" cty:"root_volume" hcl:"root_volume"`
 	Size          *int64  `mapstructure:"size" cty:"size" hcl:"size"`
 	StorageTypeID *int64  `mapstructure:"storage_type_id" cty:"storage_type_id" hcl:"storage_type_id"`
-	DatastoreID   *int64  `mapstructure:"datastore_id" cty:"datastore_id" hcl:"datastore_id"`
+	DatastoreID   *string `mapstructure:"datastore_id" cty:"datastore_id" hcl:"datastore_id"`
 }
 
 // FlatMapstructure returns a new FlatStorageVolume.
@@ -223,7 +245,7 @@ func (*FlatStorageVolume) HCL2Spec() map[string]hcldec.Spec {
 		"root_volume":     &hcldec.AttrSpec{Name: "root_volume", Type: cty.Bool, Required: false},
 		"size":            &hcldec.AttrSpec{Name: "size", Type: cty.Number, Required: false},
 		"storage_type_id": &hcldec.AttrSpec{Name: "storage_type_id", Type: cty.Number, Required: false},
-		"datastore_id":    &hcldec.AttrSpec{Name: "datastore_id", Type: cty.Number, Required: false},
+		"datastore_id":    &hcldec.AttrSpec{Name: "datastore_id", Type: cty.String, Required: false},
 	}
 	return s
 }

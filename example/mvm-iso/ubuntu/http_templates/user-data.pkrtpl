@@ -1,0 +1,42 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US.UTF-8
+  keyboard:
+    layout: us
+  refresh-installer:
+    update: no
+  source:
+    id: ubuntu-server-minimal
+  updates: security
+  apt:
+    disable_suites: [security]
+  storage:
+    layout:
+      name: lvm
+  identity:
+    hostname: packubu
+    username: ubuntu
+    password: $y$j9T$HD5G.D6QYh7Qq3byQkWJv1$//BwXxtznFb0oZNKjB/Ds.HnnM1xhh6CvM28UD1l.u4
+  ssh:
+    install-server: yes
+    allow-pw: true
+  packages:
+    - qemu-guest-agent
+    - sudo
+  user-data:
+    disable_root: false
+  late-commands:
+    - echo 'ubuntu ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/ubuntu
+  network:
+    version: 2
+    ethernets:
+      ens3:
+        addresses:
+          - "{{ .StaticIP }}/24"
+        routes:
+          - to: default
+            via: 10.0.0.1
+        nameservers:
+            search: [mydomain, otherdomain]
+            addresses: [10.0.0.1, 4.2.2.2]

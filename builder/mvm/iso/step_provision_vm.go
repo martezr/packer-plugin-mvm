@@ -30,7 +30,7 @@ type PayloadStorageVolume struct {
 	Name        string `json:"name"`
 	Size        int64  `json:"size"`
 	StorageType int64  `json:"storageType"`
-	DatastoreId int64  `json:"datastoreId"`
+	DatastoreId string `json:"datastoreId"`
 }
 
 // Run should execute the purpose of this step
@@ -40,7 +40,6 @@ func (s *StepProvisionVM) Run(_ context.Context, state multistep.StateBag) multi
 	// Config
 	config := make(map[string]interface{})
 
-	// TODO: Update the instance to MVM
 	c := state.Get("client").(*morpheus.Client)
 	instanceTypeResponse, err := c.FindInstanceTypeByName("mvm")
 	if err != nil {
@@ -79,6 +78,9 @@ func (s *StepProvisionVM) Run(_ context.Context, state multistep.StateBag) multi
 
 	// Skip Agent Install
 	config["noAgent"] = s.builder.config.SkipAgentInstall
+
+	// Skip Backup Creation
+	config["createBackup"] = false
 
 	instancePayload := map[string]interface{}{
 		"name": s.builder.config.VirtualMachineName,
@@ -139,6 +141,7 @@ func (s *StepProvisionVM) Run(_ context.Context, state multistep.StateBag) multi
 	req := &morpheus.Request{Body: payload}
 	resp, err := c.CreateInstance(req)
 	if err != nil {
+		ui.Error(err.Error())
 		log.Printf("API FAILURE: %s - %s", resp, err)
 	}
 	log.Printf("API RESPONSE: %s", resp)
@@ -152,6 +155,7 @@ func (s *StepProvisionVM) Run(_ context.Context, state multistep.StateBag) multi
 	ui.Sayf("Waiting for instance (%d) to become ready", instance.ID)
 
 	for !stringInSlice(completedStatuses, currentStatus) {
+		time.Sleep(5 * time.Second)
 		resp, err := c.GetInstance(instance.ID, &morpheus.Request{})
 		if err != nil {
 			log.Println("API ERROR: ", err)
@@ -160,7 +164,6 @@ func (s *StepProvisionVM) Run(_ context.Context, state multistep.StateBag) multi
 		currentStatus = result.Instance.Status
 		//ui.Sayf("Waiting for instance to provision - %s", currentStatus)
 		// sleep 30 seconds between polls
-		time.Sleep(30 * time.Second)
 	}
 
 	respGet, err := c.GetInstance(instance.ID, req)
@@ -178,14 +181,15 @@ func (s *StepProvisionVM) Run(_ context.Context, state multistep.StateBag) multi
 		ui.Error("Instance provisioning failed")
 		return multistep.ActionHalt
 	}
-	//ui.Say(fmt.Sprintf("Instance IP Address %s", instanceGet.ConnectionInfo[0].Ip))
+
 	// Determines that should continue to the next step
 	return multistep.ActionContinue
 }
 
 // Cleanup can be used to clean up any artifact created by the step.
 // A step's clean up always run at the end of a build, regardless of whether provisioning succeeds or fails.
-func (s *StepProvisionVM) Cleanup(_ multistep.StateBag) {}
+func (s *StepProvisionVM) Cleanup(state multistep.StateBag) {
+}
 
 type ResourcePoolOptions struct {
 	Success bool `json:"success"`

@@ -2,6 +2,7 @@ package common
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"time"
@@ -26,11 +27,7 @@ func (s *StepConvertInstance) Run(_ context.Context, state multistep.StateBag) m
 	)
 
 	if s.ConvertToTemplate {
-
 		ui.Say("Converting instance to image")
-
-		//	clonePayload := make(map[string]interface{})
-		//	clonePayload["templateName"] = "demo123"
 		c := state.Get("client").(*morpheus.Client)
 
 		data, err := c.Execute(&morpheus.Request{
@@ -43,9 +40,11 @@ func (s *StepConvertInstance) Run(_ context.Context, state multistep.StateBag) m
 		}
 
 		log.Println(data.JsonData)
-		time.Sleep(180 * time.Second)
+		// TODO: Add polling for image existance
+		time.Sleep(150 * time.Second)
 
-		log.Printf("Image Name: %s", s.InstanceName+"-%")
+		imageName := s.InstanceName + "-%"
+		log.Printf("Image Name: %s", imageName)
 		imageResponse, imageErr := c.ListVirtualImages(&morpheus.Request{
 			QueryParams: map[string]string{
 				"name": s.InstanceName + "-%",
@@ -56,6 +55,14 @@ func (s *StepConvertInstance) Run(_ context.Context, state multistep.StateBag) m
 			log.Println(imageErr)
 		}
 		result := imageResponse.Result.(*morpheus.ListVirtualImagesResult)
+		if len(*result.VirtualImages) == 0 {
+			failUrl := fmt.Sprintf("unable to find virtual image %s", imageName)
+			var failError = errors.New(failUrl)
+			state.Put("error", failError)
+			ui.Error(failUrl)
+			return multistep.ActionHalt
+		}
+
 		firstRecord := (*result.VirtualImages)[0]
 		log.Println("IMAGE STATUS: ", firstRecord)
 		virtualImageId := firstRecord.ID
@@ -74,18 +81,20 @@ func (s *StepConvertInstance) Run(_ context.Context, state multistep.StateBag) m
 			result := resp.Result.(*morpheus.GetVirtualImageResult)
 			currentStatus = result.VirtualImage.Status
 			log.Println("Current status:", currentStatus)
-			time.Sleep(30 * time.Second)
+			time.Sleep(15 * time.Second)
 		}
 
 		resp, err := c.UpdateVirtualImage(virtualImageId, &morpheus.Request{
 			Body: map[string]interface{}{
-				"name": s.TemplateName,
+				"virtualImage": map[string]interface{}{
+					"name": s.TemplateName,
+				},
 			},
 		})
 		if err != nil {
 			log.Println("API ERROR: ", err)
 		}
-		log.Println(resp.Status)
+		log.Printf("API RESPONSE: %s", resp)
 	}
 	// Determines that should continue to the next step
 	return multistep.ActionContinue

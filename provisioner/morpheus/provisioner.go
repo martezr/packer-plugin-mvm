@@ -143,7 +143,6 @@ func (p *Provisioner) Provision(_ context.Context, ui packer.Ui, _ packer.Commun
 	}
 
 	// Fetch Execution Response
-	//
 	resp, err = client.Execute(&morpheus.Request{
 		Method: "GET",
 		Path:   fmt.Sprintf("/api/job-executions/%d", jobExecutionId),
