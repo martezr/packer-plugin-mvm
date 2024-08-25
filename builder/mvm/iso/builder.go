@@ -48,15 +48,6 @@ func (b *Builder) Run(ctx context.Context, ui packer.Ui, hook packer.Hook) (pack
 		state.Put("http_interface", intf)
 	}
 
-	/*else {
-		// Use IP discovery if neither HTTPAddress nor HTTPInterface
-		// is specified.
-		steps = append(steps, &StepHTTPIPDiscover{
-			HTTPIP:  b.config.BootConfig.HTTPIP,
-			Network: ipnet,
-		})
-	}*/
-
 	steps = append(steps,
 		&common.StepConnect{
 			Config: &b.config.ConnectConfiguration,
@@ -73,7 +64,9 @@ func (b *Builder) Run(ctx context.Context, ui packer.Ui, hook packer.Hook) (pack
 			Ctx:    b.config.Ctx,
 			VMName: b.config.VirtualMachineName,
 		},
-		&common.StepWaitForIp{},
+		&common.StepWaitForIp{
+			IPWaitTimeout: b.config.IPWaitTimeout,
+		},
 	)
 
 	if b.config.Comm.Type != "none" {
@@ -91,15 +84,17 @@ func (b *Builder) Run(ctx context.Context, ui packer.Ui, hook packer.Hook) (pack
 		)
 	}
 
-	steps = append(steps,
-		&common.StepStopInstance{},
-		//&common.StepConvertInstance{
-		//	ConvertToTemplate: b.config.ConvertToTemplate,
-		//	InstanceName:      b.config.VirtualMachineName,
-		//	TemplateName:      b.config.TemplateName,
-		//},
-		//&common.StepRemoveInstance{},
-	)
+	if b.config.ConvertToTemplate {
+		steps = append(steps,
+			&common.StepStopInstance{},
+			&common.StepConvertInstance{
+				ConvertToTemplate: b.config.ConvertToTemplate,
+				InstanceName:      b.config.VirtualMachineName,
+				TemplateName:      b.config.TemplateName,
+			},
+			&common.StepRemoveInstance{},
+		)
+	}
 
 	// Set the value of the generated data that will become available to provisioners.
 	// To share the data with post-processors, use the StateData in the artifact.

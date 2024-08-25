@@ -81,18 +81,23 @@ type FlatConfig struct {
 	Username                  *string                `mapstructure:"username" cty:"username" hcl:"username"`
 	Password                  *string                `mapstructure:"password" cty:"password" hcl:"password"`
 	AccessToken               *string                `mapstructure:"access_token" cty:"access_token" hcl:"access_token"`
+	IPWaitTimeout             *string                `mapstructure:"ip_wait_timeout" cty:"ip_wait_timeout" hcl:"ip_wait_timeout"`
 	HTTPTemplateDirectory     *string                `mapstructure:"http_template_directory" cty:"http_template_directory" hcl:"http_template_directory"`
 	ConvertToTemplate         *bool                  `mapstructure:"convert_to_template" cty:"convert_to_template" hcl:"convert_to_template"`
-	SkipAgentInstall          *bool                  `mapstructure:"skip_agent_install" cty:"skip_agent_install" hcl:"skip_agent_install"`
 	ClusterName               *string                `mapstructure:"cluster_name" cty:"cluster_name" hcl:"cluster_name"`
 	VirtualMachineName        *string                `mapstructure:"vm_name" required:"true" cty:"vm_name" hcl:"vm_name"`
-	VirtualImageID            *int64                 `mapstructure:"virtual_image_id" cty:"virtual_image_id" hcl:"virtual_image_id"`
+	VirtualImageID            *int64                 `mapstructure:"virtual_image_id" required:"true" cty:"virtual_image_id" hcl:"virtual_image_id"`
 	TemplateName              *string                `mapstructure:"template_name" cty:"template_name" hcl:"template_name"`
 	ServicePlanID             *int64                 `mapstructure:"plan_id" required:"true" cty:"plan_id" hcl:"plan_id"`
 	CloudID                   *int64                 `mapstructure:"cloud_id" required:"true" cty:"cloud_id" hcl:"cloud_id"`
 	GroupID                   *int64                 `mapstructure:"group_id" cty:"group_id" hcl:"group_id"`
+	Description               *string                `mapstructure:"description" cty:"description" hcl:"description"`
+	Environment               *string                `mapstructure:"environment" cty:"environment" hcl:"environment"`
+	Labels                    []string               `mapstructure:"labels" cty:"labels" hcl:"labels"`
 	NetworkInterfaces         []FlatNetworkInterface `mapstructure:"network_interface" required:"true" cty:"network_interface" hcl:"network_interface"`
 	StorageVolumes            []FlatStorageVolume    `mapstructure:"storage_volume" required:"true" cty:"storage_volume" hcl:"storage_volume"`
+	HostID                    *int64                 `mapstructure:"host" cty:"host" hcl:"host"`
+	AttachVirtioDrivers       *bool                  `mapstructure:"attach_virtio_drivers" cty:"attach_virtio_drivers" hcl:"attach_virtio_drivers"`
 }
 
 // FlatMapstructure returns a new FlatConfig.
@@ -178,9 +183,9 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"username":                     &hcldec.AttrSpec{Name: "username", Type: cty.String, Required: false},
 		"password":                     &hcldec.AttrSpec{Name: "password", Type: cty.String, Required: false},
 		"access_token":                 &hcldec.AttrSpec{Name: "access_token", Type: cty.String, Required: false},
+		"ip_wait_timeout":              &hcldec.AttrSpec{Name: "ip_wait_timeout", Type: cty.String, Required: false},
 		"http_template_directory":      &hcldec.AttrSpec{Name: "http_template_directory", Type: cty.String, Required: false},
 		"convert_to_template":          &hcldec.AttrSpec{Name: "convert_to_template", Type: cty.Bool, Required: false},
-		"skip_agent_install":           &hcldec.AttrSpec{Name: "skip_agent_install", Type: cty.Bool, Required: false},
 		"cluster_name":                 &hcldec.AttrSpec{Name: "cluster_name", Type: cty.String, Required: false},
 		"vm_name":                      &hcldec.AttrSpec{Name: "vm_name", Type: cty.String, Required: false},
 		"virtual_image_id":             &hcldec.AttrSpec{Name: "virtual_image_id", Type: cty.Number, Required: false},
@@ -188,8 +193,13 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"plan_id":                      &hcldec.AttrSpec{Name: "plan_id", Type: cty.Number, Required: false},
 		"cloud_id":                     &hcldec.AttrSpec{Name: "cloud_id", Type: cty.Number, Required: false},
 		"group_id":                     &hcldec.AttrSpec{Name: "group_id", Type: cty.Number, Required: false},
+		"description":                  &hcldec.AttrSpec{Name: "description", Type: cty.String, Required: false},
+		"environment":                  &hcldec.AttrSpec{Name: "environment", Type: cty.String, Required: false},
+		"labels":                       &hcldec.AttrSpec{Name: "labels", Type: cty.List(cty.String), Required: false},
 		"network_interface":            &hcldec.BlockListSpec{TypeName: "network_interface", Nested: hcldec.ObjectSpec((*FlatNetworkInterface)(nil).HCL2Spec())},
 		"storage_volume":               &hcldec.BlockListSpec{TypeName: "storage_volume", Nested: hcldec.ObjectSpec((*FlatStorageVolume)(nil).HCL2Spec())},
+		"host":                         &hcldec.AttrSpec{Name: "host", Type: cty.Number, Required: false},
+		"attach_virtio_drivers":        &hcldec.AttrSpec{Name: "attach_virtio_drivers", Type: cty.Bool, Required: false},
 	}
 	return s
 }

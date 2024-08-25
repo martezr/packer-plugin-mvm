@@ -8,8 +8,7 @@ import (
 	"github.com/hashicorp/packer-plugin-sdk/multistep"
 )
 
-// Step to discover the http ip
-// which guests use to reach the vm host
+// Step to discover the http ip which guests use to reach the vm host
 // To make sure the IP is set before boot command and http server steps
 type StepHTTPIPDiscover struct {
 	HTTPIP  string

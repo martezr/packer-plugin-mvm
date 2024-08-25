@@ -233,5 +233,5 @@ func hostIP(ifname string) (string, error) {
 			}
 		}
 	}
-	return "", errors.New("No host IP found")
+	return "", errors.New("no host IP found")
 }

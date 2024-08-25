@@ -27,7 +27,7 @@ func (s *StepConvertInstance) Run(_ context.Context, state multistep.StateBag) m
 	)
 
 	if s.ConvertToTemplate {
-		ui.Say("Converting instance to image")
+		ui.Say("Converting instance to virtual image")
 		c := state.Get("client").(*morpheus.Client)
 
 		data, err := c.Execute(&morpheus.Request{
@@ -71,7 +71,6 @@ func (s *StepConvertInstance) Run(_ context.Context, state multistep.StateBag) m
 		// Poll Virtual Images for Status
 		currentStatus := "Saving"
 		completedStatuses := []string{"Active"}
-		log.Println("Polling order status...")
 
 		for !stringInSlice(completedStatuses, currentStatus) {
 			resp, err := c.GetVirtualImage(virtualImageId, &morpheus.Request{})

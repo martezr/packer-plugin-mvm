@@ -33,7 +33,7 @@ autoinstall:
     ethernets:
       ens3:
         addresses:
-          - "10.0.0.15/24"
+          - "10.0.0.16/24"
         routes:
           - to: default
             via: 10.0.0.1

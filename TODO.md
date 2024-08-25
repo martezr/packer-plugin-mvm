@@ -8,3 +8,5 @@
 **All Installs**
 
 * Expose simpler primitives such as names instead of IDs
+* Add support for tags
+* Cleanup template generated files for ISO builds

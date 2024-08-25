@@ -4,6 +4,8 @@
 package iso
 
 import (
+	"time"
+
 	packerCommon "github.com/hashicorp/packer-plugin-sdk/common"
 	"github.com/hashicorp/packer-plugin-sdk/communicator"
 	"github.com/hashicorp/packer-plugin-sdk/multistep/commonsteps"
@@ -19,22 +21,38 @@ type Config struct {
 	BootConfig                  `mapstructure:",squash"`
 	Comm                        communicator.Config `mapstructure:",squash"`
 	common.ConnectConfiguration `mapstructure:",squash"`
-	HTTPTemplateDirectory       string `mapstructure:"http_template_directory"`
-	ConvertToTemplate           bool   `mapstructure:"convert_to_template"`
-	SkipAgentInstall            bool   `mapstructure:"skip_agent_install"`
-	ClusterName                 string `mapstructure:"cluster_name"`
-	VirtualMachineName          string `mapstructure:"vm_name" required:"true"`
-	VirtualImageID              int64  `mapstructure:"virtual_image_id"`
-	TemplateName                string `mapstructure:"template_name"`
+	// Amount of time to wait for VM's IP, similar to 'ssh_timeout'.
+	// Defaults to 30m (30 minutes). See the Golang
+	// [ParseDuration](https://golang.org/pkg/time/#ParseDuration) documentation
+	// for full details.
+	IPWaitTimeout         time.Duration `mapstructure:"ip_wait_timeout"`
+	HTTPTemplateDirectory string        `mapstructure:"http_template_directory"`
+	// Whether to convert the instance to a virtual image
+	ConvertToTemplate bool `mapstructure:"convert_to_template"`
+	//SkipAgentInstall            bool   `mapstructure:"skip_agent_install"`
+	// The name of the MVM cluster to provision the instance on.
+	ClusterName string `mapstructure:"cluster_name"`
+	// The name of the instance to provision.
+	VirtualMachineName string `mapstructure:"vm_name" required:"true"`
+	// The id of the ISO virtual image to use as the instance instance source image.
+	VirtualImageID int64 `mapstructure:"virtual_image_id" required:"true"`
+	// The name of the virtual image to create.
+	TemplateName string `mapstructure:"template_name"`
 	// The ID of the service plan that will be associated with the instance.
 	ServicePlanID int64 `mapstructure:"plan_id" required:"true"`
 	// The ID of the cloud that contains the MVM cluster.
 	CloudID int64 `mapstructure:"cloud_id" required:"true"`
 	// The ID of the Morpheus group to deploy the instance into.
-	GroupID           int64               `mapstructure:"group_id"`
-	NetworkInterfaces []NetworkInterface  `mapstructure:"network_interface" required:"true"`
-	StorageVolumes    []StorageVolume     `mapstructure:"storage_volume" required:"true"`
-	Ctx               interpolate.Context `mapstructure-to-hcl2:",skip"`
+	GroupID int64 `mapstructure:"group_id"`
+	// The name of the instance to provision.
+	Description         string              `mapstructure:"description"`
+	Environment         string              `mapstructure:"environment"`
+	Labels              []string            `mapstructure:"labels"`
+	NetworkInterfaces   []NetworkInterface  `mapstructure:"network_interface" required:"true"`
+	StorageVolumes      []StorageVolume     `mapstructure:"storage_volume" required:"true"`
+	HostID              int64               `mapstructure:"host"`
+	AttachVirtioDrivers bool                `mapstructure:"attach_virtio_drivers"`
+	Ctx                 interpolate.Context `mapstructure-to-hcl2:",skip"`
 }
 
 type NetworkInterface struct {
@@ -64,7 +82,6 @@ func (c *Config) Prepare(raws ...interface{}) (generatedVars []string, warnings 
 		InterpolateFilter: &interpolate.RenderFilter{
 			Exclude: []string{
 				"boot_command",
-				//"http_content",
 			},
 		},
 	}, raws...)
