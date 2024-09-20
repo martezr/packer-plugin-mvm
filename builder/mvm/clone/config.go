@@ -14,17 +14,20 @@ type Config struct {
 	packerCommon.PackerConfig   `mapstructure:",squash"`
 	Comm                        communicator.Config `mapstructure:",squash"`
 	common.ConnectConfiguration `mapstructure:",squash"`
-	ConvertToTemplate           bool               `mapstructure:"convert_to_template" json:"convert_to_template"`
-	SkipAgentInstall            bool               `mapstructure:"skip_agent_install"`
-	ClusterName                 string             `mapstructure:"cluster_name" json:"cluster_name" required:"true"`
-	VirtualMachineName          string             `mapstructure:"vm_name" required:"true"`
-	VirtualImageID              int64              `mapstructure:"virtual_image_id"`
-	TemplateName                string             `mapstructure:"template_name"`
-	ServicePlanID               int64              `mapstructure:"plan_id" json:"plan_id" required:"true"`
-	CloudID                     int64              `mapstructure:"cloud_id" json:"cloud_id" required:"true"`
-	GroupID                     int64              `mapstructure:"group_id" json:"group_id" required:"true"`
-	NetworkInterfaces           []NetworkInterface `mapstructure:"network_interface" required:"true"`
-	StorageVolumes              []StorageVolume    `mapstructure:"storage_volume" required:"true"`
+	// Whether to convert the instance to a virtual image
+	ConvertToTemplate bool `mapstructure:"convert_to_template" json:"convert_to_template"`
+	// Whether to install the Morpheus agent on the instance or not
+	SkipAgentInstall bool `mapstructure:"skip_agent_install"`
+	// The name of the MVM cluster
+	ClusterName        string             `mapstructure:"cluster_name" json:"cluster_name" required:"true"`
+	VirtualMachineName string             `mapstructure:"vm_name" required:"true"`
+	VirtualImageID     int64              `mapstructure:"virtual_image_id"`
+	TemplateName       string             `mapstructure:"template_name"`
+	ServicePlanID      int64              `mapstructure:"plan_id" json:"plan_id" required:"true"`
+	Cloud              string             `mapstructure:"cloud" json:"cloud" required:"true"`
+	GroupID            int64              `mapstructure:"group_id" json:"group_id" required:"true"`
+	NetworkInterfaces  []NetworkInterface `mapstructure:"network_interface" required:"true"`
+	StorageVolumes     []StorageVolume    `mapstructure:"storage_volume" required:"true"`
 }
 
 type NetworkInterface struct {

@@ -23,9 +23,13 @@ $ packer plugins install github.com/martezr/mvm
 
 ### Components
 
+The Morpheus MVM plugin allows Packer to interface with [Morpheus](https://morpheusdata.com).
+
 #### Builders
 
 - [mvm-clone](/docs/builders/mvm-clone.md) - The `mvm-clone` builder is used to create MVM custom templates based on an existing MVM virtual machine.
+
+- [mvm-iso](/docs/builders/mvm-iso.md) - The `mvm-iso` builder is used to create MVM custom templates based on an ISO file.
 
 #### Provisioners
 

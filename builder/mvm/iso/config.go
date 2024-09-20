@@ -40,10 +40,10 @@ type Config struct {
 	TemplateName string `mapstructure:"template_name"`
 	// The ID of the service plan that will be associated with the instance.
 	ServicePlanID int64 `mapstructure:"plan_id" required:"true"`
-	// The ID of the cloud that contains the MVM cluster.
-	CloudID int64 `mapstructure:"cloud_id" required:"true"`
-	// The ID of the Morpheus group to deploy the instance into.
-	GroupID int64 `mapstructure:"group_id"`
+	// The name of the cloud that contains the MVM cluster.
+	Cloud string `mapstructure:"cloud" required:"true"`
+	// The name of the Morpheus group to deploy the instance into.
+	Group string `mapstructure:"group" required:"true"`
 	// The name of the instance to provision.
 	Description         string              `mapstructure:"description"`
 	Environment         string              `mapstructure:"environment"`

@@ -53,6 +53,7 @@ func (b *Builder) Run(ctx context.Context, ui packer.Ui, hook packer.Hook) (pack
 			Config: &b.config.ConnectConfiguration,
 		},
 		&StepProvisionVM{builder: b},
+		// TODO: Add a check to evaluate if the variable is defined
 		&StepGenerateHTTPTemplates{
 			TemplateDirectory: b.config.HTTPTemplateDirectory,
 			HTTPDirectory:     b.config.HTTPDir,
@@ -69,7 +70,9 @@ func (b *Builder) Run(ctx context.Context, ui packer.Ui, hook packer.Hook) (pack
 		},
 	)
 
-	if b.config.Comm.Type != "none" {
+	// TODO: Add support for WinRM communicator
+
+	if b.config.Comm.Type == "ssh" {
 		steps = append(steps,
 			&communicator.StepConnect{
 				Config:    &b.config.Comm,
@@ -78,7 +81,9 @@ func (b *Builder) Run(ctx context.Context, ui packer.Ui, hook packer.Hook) (pack
 			},
 			&commonsteps.StepProvision{},
 		)
-	} else {
+	}
+
+	if b.config.Comm.Type == "none" {
 		steps = append(steps,
 			&commonsteps.StepProvision{},
 		)
@@ -103,7 +108,7 @@ func (b *Builder) Run(ctx context.Context, ui packer.Ui, hook packer.Hook) (pack
 	})
 
 	// Run!
-	b.runner = commonsteps.NewRunner(steps, b.config.PackerConfig, ui)
+	b.runner = commonsteps.NewRunnerWithPauseFn(steps, b.config.PackerConfig, ui, state)
 	b.runner.Run(ctx, state)
 
 	// If there was an error, return that

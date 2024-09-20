@@ -34,6 +34,11 @@ func (s *StepGenerateHTTPTemplates) Run(ctx context.Context, state multistep.Sta
 	instance := state.Get("instance").(*morpheus.Instance)
 	ui := state.Get("ui").(packersdk.Ui)
 
+	if s.TemplateDirectory == "" {
+		log.Println("No template directory given, skipping")
+		return multistep.ActionContinue
+	}
+
 	c := state.Get("client").(*morpheus.Client)
 	ipPoolResponse, err := c.ListNetworkPoolIPAddresses(instance.Interfaces[0].Network.Pool.ID, &morpheus.Request{
 		QueryParams: map[string]string{

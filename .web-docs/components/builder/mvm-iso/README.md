@@ -2,12 +2,12 @@ Type: `mvm-iso`
 
 Artifact BuilderId: `morpheus.mvm-iso`
 
-This builder clones an existing template, modifies the virtual machine image, and saves the result
-as a new template using the vSphere API.
+This builder creates a template (virtual image), modifies the virtual machine image, and saves the result
+as a new template (virtual image) using the Morpheus API.
 
 ## Examples
 
-Examples are available in the [examples](https://github.com/martezr/packer-plugin-mvm/tree/main/builder//examples/)
+Examples are available in the [examples](https://github.com/martezr/packer-plugin-mvm/tree/main/examples/)
 directory of the GitHub repository.
 
 ## Configuration Reference
@@ -22,19 +22,29 @@ references, which are necessary for a build to succeed and can be found further 
 
 <!-- Code generated from the comments of the Config struct in builder/mvm/iso/config.go; DO NOT EDIT MANUALLY -->
 
+- `ip_wait_timeout` (duration string | ex: "1h5m2s") - Amount of time to wait for VM's IP, similar to 'ssh_timeout'.
+  Defaults to 30m (30 minutes). See the Golang
+  [ParseDuration](https://golang.org/pkg/time/#ParseDuration) documentation
+  for full details.
+
 - `http_template_directory` (string) - HTTP Template Directory
 
-- `convert_to_template` (bool) - Convert To Template
+- `convert_to_template` (bool) - Whether to convert the instance to a virtual image
 
-- `skip_agent_install` (bool) - Skip Agent Install
+- `cluster_name` (string) - SkipAgentInstall            bool   `mapstructure:"skip_agent_install"`
+  The name of the MVM cluster to provision the instance on.
 
-- `cluster_name` (string) - Cluster Name
+- `template_name` (string) - The name of the virtual image to create.
 
-- `virtual_image_id` (int64) - Virtual Image ID
+- `description` (string) - The name of the instance to provision.
 
-- `template_name` (string) - Template Name
+- `environment` (string) - Environment
 
-- `group_id` (int64) - The ID of the Morpheus group to deploy the instance into.
+- `labels` ([]string) - Labels
+
+- `host` (int64) - Host ID
+
+- `attach_virtio_drivers` (bool) - Attach Virtio Drivers
 
 <!-- End of code generated from the comments of the Config struct in builder/mvm/iso/config.go; -->
 
@@ -176,6 +186,45 @@ boot_command = [
 
 ```
 
+The example shown below is a working boot command used to start an Ubuntu
+12.04 installer:
+
+In JSON:
+
+```json
+"boot_command": [
+
+	"<esc><esc><enter><wait>",
+	"/install/vmlinuz noapic ",
+	"preseed/url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg ",
+	"debian-installer=en_US auto locale=en_US kbd-chooser/method=us ",
+	"hostname={{ .Name }} ",
+	"fb=false debconf/frontend=noninteractive ",
+	"keyboard-configuration/modelcode=SKIP keyboard-configuration/layout=USA ",
+	"keyboard-configuration/variant=USA console-setup/ask_detect=false ",
+	"initrd=/install/initrd.gz -- <enter>"
+
+]
+```
+
+In HCL2:
+
+```hcl
+boot_command = [
+
+	"<esc><esc><enter><wait>",
+	"/install/vmlinuz noapic ",
+	"preseed/url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg ",
+	"debian-installer=en_US auto locale=en_US kbd-chooser/method=us ",
+	"hostname={{ .Name }} ",
+	"fb=false debconf/frontend=noninteractive ",
+	"keyboard-configuration/modelcode=SKIP keyboard-configuration/layout=USA ",
+	"keyboard-configuration/variant=USA console-setup/ask_detect=false ",
+	"initrd=/install/initrd.gz -- <enter>"
+
+]
+```
+
 For more examples of various boot commands, see the sample projects from our
 [community templates page](https://packer.io/community-tools#templates).
 
@@ -285,11 +334,9 @@ wget http://{{ .HTTPIP }}:{{ .HTTPPort }}/foo/bar/preseed.cfg
 
 **Optional:**
 
-
 ### Wait Configuration
 
 **Optional:**
-
 
 ### Communicator Configuration
 
@@ -527,26 +574,72 @@ wget http://{{ .HTTPIP }}:{{ .HTTPPort }}/foo/bar/preseed.cfg
 
 ## Privileges
 
-- VM folder (this object and children):
+|Permission|Description|Value|
+|----------|-----------|-----|
+|Instance Type (MVM)|||
 
-  ```text
-  Virtual machine > Inventory
-  Virtual machine > Configuration
-  Virtual machine > Interaction
-  Virtual machine > Snapshot management
-  Virtual machine > Provisioning
-  ```
 
-- Resource pool, host, or cluster (this object):
+The following is an example of code using the Morpheus Terraform
+provider to create a role with the minimum required permissions
+for the Packer iso builder. 
 
-  ```text
-  Resource -> Assign virtual machine to resource pool
-  ```
+```
+data "morpheus_group" "demo" {
+  name = "Demo"
+}
 
-- Datastore (this object):
+data "morpheus_instance_type" "demo" {
+  name = "mvm"
+}
 
-  ```text
-  Datastore > Allocate space
-  Datastore > Browse datastore
-  Datastore > Low level file operations
-  ```
+data "morpheus_task" "demo" {
+  name = "Demo"
+}
+
+data "morpheus_workflow" "demo" {
+  name = "Demo"
+}
+
+data "morpheus_permission_set" "source_one" {
+  default_group_permission             = "none"
+  default_instance_type_permission     = "none"
+  default_blueprint_permission         = "none"
+  default_report_type_permission       = "none"
+  default_persona                      = "vdi"
+  default_catalog_item_type_permission = "none"
+  default_vdi_pool_permission          = "none"
+  default_workflow_permission          = "none"
+  default_task_permission              = "none"
+
+  feature_permission {
+    code   = "provisioning-admin"
+    access = "full"
+  }
+
+  group_permission {
+    id     = data.morpheus_group.demo.id
+    access = "full"
+  }
+
+  instance_type_permission {
+    id     = data.morpheus_instance_type.demo.id
+    access = "full"
+  }
+
+  persona_permission {
+    code   = "standard"
+    access = "full"
+  }
+
+  workflow_permission {
+    id     = data.morpheus_workflow.demo.id
+    access = "full"
+  }
+
+  task_permission {
+    id     = data.morpheus_task.demo.id
+    access = "none"
+  }
+}
+
+```

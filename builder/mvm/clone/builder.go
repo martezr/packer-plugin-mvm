@@ -12,6 +12,8 @@ import (
 	"github.com/martezr/packer-plugin-mvm/builder/mvm/common"
 )
 
+const BuilderId = "mvm-clone.builder"
+
 type Builder struct {
 	config Config
 	runner multistep.Runner
@@ -35,7 +37,7 @@ func (b *Builder) Run(ctx context.Context, ui packer.Ui, hook packer.Hook) (pack
 		&StepProvisionVM{builder: b},
 	)
 
-	if b.config.Comm.Type != "none" {
+	if b.config.Comm.Type == "ssh" {
 		steps = append(steps,
 			&communicator.StepConnect{
 				Config:    &b.config.Comm,
@@ -44,7 +46,9 @@ func (b *Builder) Run(ctx context.Context, ui packer.Ui, hook packer.Hook) (pack
 			},
 			&commonsteps.StepProvision{},
 		)
-	} else {
+	}
+
+	if b.config.Comm.Type == "none" {
 		steps = append(steps,
 			&commonsteps.StepProvision{},
 		)

@@ -82,6 +82,7 @@ func (s *StepTypeBootCommand) Run(ctx context.Context, state multistep.StateBag)
 		return multistep.ActionHalt
 	}
 
+	// TODO: Add logic to evaluate whether to use a static IP or DHCP
 	c := state.Get("client").(*morpheus.Client)
 	ipPoolResponse, err := c.ListNetworkPoolIPAddresses(instance.Interfaces[0].Network.Pool.ID, &morpheus.Request{
 		QueryParams: map[string]string{
@@ -97,9 +98,9 @@ func (s *StepTypeBootCommand) Run(ctx context.Context, state multistep.StateBag)
 	instanceStaticSubnetMask := ipInfo.SubnetMask
 	instanceStaticGateway := ipInfo.GatewayAddress
 	instanceStaticDNS := ipInfo.DnsServer
+
 	// If the port is set, we will use the HTTP server to serve the boot command.
 	if port > 0 {
-
 		keys := []string{"http_bind_address", "http_interface", "http_ip"}
 		for _, key := range keys {
 			value, ok := state.Get(key).(string)
@@ -169,6 +170,8 @@ func (s *StepTypeBootCommand) Run(ctx context.Context, state multistep.StateBag)
 		if _, ok := state.GetOk(multistep.StateCancelled); ok {
 			return multistep.ActionHalt
 		}
+
+		// TODO: Add logic to mask sensitive data or not display
 		ui.Sayf("Sending console keys: %s", command)
 		runCommand(*c, instance, command)
 		if pauseFn != nil {
@@ -201,6 +204,7 @@ func runCommand(c morpheus.Client, instance *morpheus.Instance, command string) 
 	}
 	log.Printf("API RESPONSE: %s", resp)
 	resultGet := resp.Result.(*morpheus.ExecutionRequestResult)
+	// TODO: Add boot command interval wait config option
 	time.Sleep(5 * time.Second)
 
 	c.GetExecutionRequest(resultGet.ExecutionRequest.UniqueID, &morpheus.Request{})

@@ -78,7 +78,7 @@ type FlatConfig struct {
 	VirtualImageID            *int64                 `mapstructure:"virtual_image_id" cty:"virtual_image_id" hcl:"virtual_image_id"`
 	TemplateName              *string                `mapstructure:"template_name" cty:"template_name" hcl:"template_name"`
 	ServicePlanID             *int64                 `mapstructure:"plan_id" json:"plan_id" required:"true" cty:"plan_id" hcl:"plan_id"`
-	CloudID                   *int64                 `mapstructure:"cloud_id" json:"cloud_id" required:"true" cty:"cloud_id" hcl:"cloud_id"`
+	Cloud                     *string                `mapstructure:"cloud" json:"cloud" required:"true" cty:"cloud" hcl:"cloud"`
 	GroupID                   *int64                 `mapstructure:"group_id" json:"group_id" required:"true" cty:"group_id" hcl:"group_id"`
 	NetworkInterfaces         []FlatNetworkInterface `mapstructure:"network_interface" required:"true" cty:"network_interface" hcl:"network_interface"`
 	StorageVolumes            []FlatStorageVolume    `mapstructure:"storage_volume" required:"true" cty:"storage_volume" hcl:"storage_volume"`
@@ -164,7 +164,7 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"virtual_image_id":             &hcldec.AttrSpec{Name: "virtual_image_id", Type: cty.Number, Required: false},
 		"template_name":                &hcldec.AttrSpec{Name: "template_name", Type: cty.String, Required: false},
 		"plan_id":                      &hcldec.AttrSpec{Name: "plan_id", Type: cty.Number, Required: false},
-		"cloud_id":                     &hcldec.AttrSpec{Name: "cloud_id", Type: cty.Number, Required: false},
+		"cloud":                        &hcldec.AttrSpec{Name: "cloud", Type: cty.String, Required: false},
 		"group_id":                     &hcldec.AttrSpec{Name: "group_id", Type: cty.Number, Required: false},
 		"network_interface":            &hcldec.BlockListSpec{TypeName: "network_interface", Nested: hcldec.ObjectSpec((*FlatNetworkInterface)(nil).HCL2Spec())},
 		"storage_volume":               &hcldec.BlockListSpec{TypeName: "storage_volume", Nested: hcldec.ObjectSpec((*FlatStorageVolume)(nil).HCL2Spec())},

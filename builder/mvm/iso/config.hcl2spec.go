@@ -89,8 +89,8 @@ type FlatConfig struct {
 	VirtualImageID            *int64                 `mapstructure:"virtual_image_id" required:"true" cty:"virtual_image_id" hcl:"virtual_image_id"`
 	TemplateName              *string                `mapstructure:"template_name" cty:"template_name" hcl:"template_name"`
 	ServicePlanID             *int64                 `mapstructure:"plan_id" required:"true" cty:"plan_id" hcl:"plan_id"`
-	CloudID                   *int64                 `mapstructure:"cloud_id" required:"true" cty:"cloud_id" hcl:"cloud_id"`
-	GroupID                   *int64                 `mapstructure:"group_id" cty:"group_id" hcl:"group_id"`
+	Cloud                     *string                `mapstructure:"cloud" required:"true" cty:"cloud" hcl:"cloud"`
+	Group                     *string                `mapstructure:"group" required:"true" cty:"group" hcl:"group"`
 	Description               *string                `mapstructure:"description" cty:"description" hcl:"description"`
 	Environment               *string                `mapstructure:"environment" cty:"environment" hcl:"environment"`
 	Labels                    []string               `mapstructure:"labels" cty:"labels" hcl:"labels"`
@@ -191,8 +191,8 @@ func (*FlatConfig) HCL2Spec() map[string]hcldec.Spec {
 		"virtual_image_id":             &hcldec.AttrSpec{Name: "virtual_image_id", Type: cty.Number, Required: false},
 		"template_name":                &hcldec.AttrSpec{Name: "template_name", Type: cty.String, Required: false},
 		"plan_id":                      &hcldec.AttrSpec{Name: "plan_id", Type: cty.Number, Required: false},
-		"cloud_id":                     &hcldec.AttrSpec{Name: "cloud_id", Type: cty.Number, Required: false},
-		"group_id":                     &hcldec.AttrSpec{Name: "group_id", Type: cty.Number, Required: false},
+		"cloud":                        &hcldec.AttrSpec{Name: "cloud", Type: cty.String, Required: false},
+		"group":                        &hcldec.AttrSpec{Name: "group", Type: cty.String, Required: false},
 		"description":                  &hcldec.AttrSpec{Name: "description", Type: cty.String, Required: false},
 		"environment":                  &hcldec.AttrSpec{Name: "environment", Type: cty.String, Required: false},
 		"labels":                       &hcldec.AttrSpec{Name: "labels", Type: cty.List(cty.String), Required: false},

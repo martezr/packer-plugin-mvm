@@ -1,4 +1,3 @@
-/*
 packer {
   required_plugins {
     mvm = {
@@ -7,7 +6,7 @@ packer {
     }
   }
 }
-*/
+
 
 locals {
   timestamp = formatdate("mmss", timestamp())
@@ -18,20 +17,20 @@ locals {
 }
 
 source "mvm-iso" "rocky-linux-demo" {
-  url                 = var.morpheus_url
-  username            = var.morpheus_username
-  password            = var.morpheus_password
+  url      = var.morpheus_url
+  username = var.morpheus_username
+  password = var.morpheus_password
 
   // MVM Cluster
-  cluster_name        = "mvmcluster01"
-  vm_name             = local.vm_name
-  description         = "packer test instance"
-  environment         = "dev"
-  labels              = ["packer","automation"]
-  virtual_image_id    = 1021
-  group_id            = 3
-  cloud_id            = 139
-  plan_id             = 174
+  cluster_name     = "mvmcluster01"
+  vm_name          = local.vm_name
+  description      = "packer test instance"
+  environment      = "dev"
+  labels           = ["packer", "automation"]
+  virtual_image_id = 1021
+  group_id         = 3
+  cloud_id         = 139
+  plan_id          = 174
 
   network_interface {
     network_id                = 229
@@ -57,8 +56,8 @@ source "mvm-iso" "rocky-linux-demo" {
   convert_to_template = true
   template_name       = "rocky9mvm"
 
-  boot_command        = local.boot_command
-  boot_wait           = "5s"
+  boot_command            = local.boot_command
+  boot_wait               = "5s"
   http_interface          = "en0"
   http_directory          = "${path.root}/http"
   http_template_directory = "${path.root}/http_templates"
@@ -69,10 +68,10 @@ source "mvm-iso" "rocky-linux-demo" {
   ip_wait_timeout = "15m"
 
   // Provisioner settimgs
-  ssh_timeout     = "55m"
-  communicator    = "ssh"
-  ssh_username    = "root"
-  ssh_password    = "mysecurepassword"
+  ssh_timeout  = "55m"
+  communicator = "ssh"
+  ssh_username = "root"
+  ssh_password = "mysecurepassword"
 }
 
 build {
@@ -81,6 +80,6 @@ build {
   ]
 
   provisioner "shell" {
-    inline = ["echo foo"]
+    script = "scripts/setup.sh"
   }
 }

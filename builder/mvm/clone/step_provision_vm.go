@@ -99,7 +99,7 @@ func (s *StepProvisionVM) Run(_ context.Context, state multistep.StateBag) multi
 	}
 
 	payload := map[string]interface{}{
-		"zoneId":   s.builder.config.CloudID,
+		"zoneId":   s.builder.config.Cloud,
 		"instance": instancePayload,
 		"config":   config,
 	}
